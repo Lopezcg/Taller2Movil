@@ -14,11 +14,13 @@
         android:name="com.google.android.gms.maps.SupportMapFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
-    <EditText android:id="@+id/texto"
+    <EditText
+        android:id="@+id/texto"
         android:layout_height="wrap_content"
         android:layout_width="wrap_content"
         android:paddingHorizontal="80dp"
         android:hint="Dirección"
+        android:inputType="text"
         android:background="@drawable/roundcorner"
         android:textColor="@color/white"
         android:layout_marginTop="?attr/actionBarSize"

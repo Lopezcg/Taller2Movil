@@ -22,6 +22,5 @@ class MainActivity : AppCompatActivity() {
         binding.imagebutton3.setOnClickListener{
             startActivity(Intent(this,MapsActivity::class.java))
         }
-
     }
 }
