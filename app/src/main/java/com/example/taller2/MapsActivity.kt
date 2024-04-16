@@ -34,7 +34,13 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.android.gms.maps.model.MarkerOptions
+import org.json.JSONObject
+import java.io.File
+import java.io.FileWriter
 import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
@@ -70,10 +76,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             override fun onSensorChanged(event: SensorEvent?) {
                 if (mMap != null) {
                     if (event!!.values[0] < 10000) {
-                        Log.i("MAPS", "DARK MAP " + event.values[0])
+
                         mMap!!.setMapStyle(MapStyleOptions.loadRawResourceStyle(baseContext, R.raw.map_style_dark))
                     } else {
-                        Log.i("MAPS", "LIGHT MAP " + event.values[0])
+
                         mMap!!.setMapStyle(MapStyleOptions.loadRawResourceStyle(baseContext, R.raw.map_style_retro))
                     }
                 }
@@ -196,41 +202,48 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
     private fun setupMap() {
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                android.Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                this,
-                android.Manifest.permission.ACCESS_COARSE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION),
-                LOCATION_PERMISSION_REQUEST_CODE
-            )
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+            ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION),
+                LOCATION_PERMISSION_REQUEST_CODE)
             return
         }
 
         // Enable the my location layer on the map
         mMap?.isMyLocationEnabled = true
 
-        val locationRequest = LocationRequest.create()?.apply {
+        val locationRequest = LocationRequest.create().apply {
             interval = 10000
             fastestInterval = 5000
             priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+            smallestDisplacement = 30f // Solo recibe actualizaciones después de 30 metros de desplazamiento
         }
 
-        // Request location updates
         fusedLocationClient.requestLocationUpdates(locationRequest, object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
-                for (location in locationResult.locations) {
-                    lastKnownLocation = location  // Update last known location
-                    updateLocationUI(location)   // Optional: Update UI with the location
+                locationResult.locations.lastOrNull()?.let { location ->
+                    if (lastKnownLocation == null || location.distanceTo(lastKnownLocation!!) > 30) {
+                        updateLocationUI(location)
+                        recordLocationInJson(location)
+                    }
+                    lastKnownLocation = location
                 }
             }
         }, Looper.getMainLooper())
     }
+    private fun recordLocationInJson(location: Location) {
+        val jsonObject = JSONObject().apply {
+            put("latitude", location.latitude)
+            put("longitude", location.longitude)
+            put("timestamp", SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date()))
+        }
+
+        val file = File(getFilesDir(), "location_data.json")
+        FileWriter(file, true).use { fw ->
+            fw.append(jsonObject.toString() + "\n")
+        }
+    }
+
 
 
     companion object {
